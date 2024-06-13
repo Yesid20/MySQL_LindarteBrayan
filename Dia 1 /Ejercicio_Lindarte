@@ -1,0 +1,86 @@
+-- ########################
+-- ### EJERCICIO # 1 ######
+-- ########################
+
+
+-- Creación de la base de datos "tienda"
+CREATE DATABASE	tienda;
+
+-- Usar base de datos "tienda"
+uSe tienda;
+
+ -- Crear tabla fabricante 
+create table fabricante(
+id int auto_increment primary key, 
+nombre varchar(100)
+);
+
+-- Mostrar tablas
+show tables;
+
+-- Crear tabla "producto"
+
+create table producto(
+id int auto_increment primary key, 
+nombre varchar(100),
+precio decimal(10,2),
+id_fabricante int, 
+foreign key	(id_fabricante) references fabricante(id)
+);
+
+-- Insertar información a fabricante 
+
+INSERT INTO fabricante VALUES(1, 'Apple');
+INSERT INTO fabricante VALUES(2, 'Samsung');
+INSERT INTO fabricante VALUES(3, 'Xiaomi');
+INSERT INTO fabricante VALUES(4, 'Oppo');
+INSERT INTO fabricante VALUES(5, 'Infinix');
+INSERT INTO fabricante VALUES(6, 'Alcatel');
+INSERT INTO fabricante VALUES(7, 'Nokia');
+INSERT INTO fabricante VALUES(8, 'Motorola');
+INSERT INTO fabricante VALUES(9, 'Zte');
+
+-- Insertar productos a la tabla 
+insert into productos values (1, 'Disco duro SATA3 1TB', 86.99, 1);
+insert into productos values (2, 'Model A 21s', 80.32, 2);
+insert into productos values (3, 'Redmi 13', 54.45, 3);
+insert into productos values (4, 'Plus brillante', 35.39, 4);
+insert into productos values (5, 'cuarenta pri pra', 50.23, 5);
+insert into productos values (6, 'Disco externo cuaren ', 36.98, 6);
+insert into productos values (7, 'Disco memoria RAM', 45.99, 7);
+insert into productos values (8, 'Touch pad pro', 86.99, 8);
+
+
+-- Revisar todos los datos creados por la tabla 
+select * from fabricante;
+
+-- Revisar todos los datos creados 
+select * from fabricante where id=2;
+
+-- Revisar por columna de los datos creado de la tabla. 
+select nombre from producto;
+
+-- Revisar x y y columna de los datos creados
+select id, nombre from producto; 
+
+update producto set nombre='Campuslands' where id=10;
+
+select * from producto; 
+
+-- Actualizar todas las filas a un nuevo nombre 
+update producto set nombre='Campuslands';
+
+-- Eliminar un dato 
+
+delete from producto where id=10; 
+select * from producto;
+-- Eliminar
+select * from producto; 
+
+-- Eliminar tabla
+drop table producto; 
+
+
+
+
+-- Desarrollado por Brayan Lindarte / ID.10.xx.xxx.xxx
