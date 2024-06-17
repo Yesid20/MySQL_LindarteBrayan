@@ -1,3 +1,162 @@
+-- ####################################
+-- ### DIA #5 - Consultas - Funciones #
+-- ####################################
+
+use dia3;
+
+## clientes - no han realizado pagos
+select distinct cliente.nombre_cliente, cliente.codigo_cliente
+from cliente
+where cliente.codigo_cliente not in(select pago.codigo_cliente from pago);
+
+## clientes - no han realizado pedidos
+select distinct cliente.nombre_cliente, cliente.codigo_cliente
+from cliente
+where cliente.codigo_cliente not in(select pedido.codigo_cliente from pedido);
+
+## clientes - no han realizado pagos - ni pedidos
+select distinct cliente.nombre_cliente, cliente.codigo_cliente
+from cliente
+where cliente.codigo_cliente not in(select pedido.codigo_cliente from pedido) and cliente.codigo_cliente not in (select pago.codigo_cliente from pago);
+
+##  empleados - sin oficina asociada (no hay)
+select empleado.codigo_empleado, empleado.nombre
+from empleado
+where empleado.codigo_oficina not in (select oficina.codigo_oficina from oficina);
+
+## empleados - sin cliente asociado
+select empleado.codigo_empleado, empleado.nombre
+from empleado
+where empleado.codigo_empleado not in (select cliente.codigo_empleado_rep_ventas from cliente);
+
+## empleados - sin cliente asociado - datos de la oficina donde trabajan
+select empleado.codigo_empleado, empleado.nombre, oficina.codigo_oficina, oficina.ciudad, oficina.pais, oficina.telefono
+from empleado
+inner join oficina on empleado.codigo_oficina = oficina.codigo_oficina
+where empleado.codigo_empleado not in (select cliente.codigo_empleado_rep_ventas from cliente);
+
+## empleados - sin oficina asociada - sin cliente asociado (no hay)
+select empleado.codigo_empleado, empleado.nombre
+from empleado
+where empleado.codigo_oficina not in (select oficina.codigo_oficina from oficina) and empleado.codigo_empleado not in (select cliente.codigo_empleado_rep_ventas from cliente);
+
+## productos - nunca han aparecido en un pedido
+select producto.codigo_producto, producto.nombre, producto.gama
+from producto
+where producto.codigo_producto not in (select detalle_pedido.codigo_producto from detalle_pedido);
+
+## productos - nunca han aparecido en un pedido - nombre - descripción - imagen del producto
+select producto.codigo_producto, producto.nombre, producto.gama, producto.descripcion, gp.imagen
+from producto
+inner join gama_producto gp on producto.gama = gp.gama
+where producto.codigo_producto not in (select detalle_pedido.codigo_producto from detalle_pedido);
+
+## oficinas - no trabajan empleados_rep_ventas de clientes que han hecho compras de productos de la gama frutales
+select oficina.codigo_oficina, oficina.pais, oficina.telefono, producto.gama
+from producto
+inner join detalle_pedido on producto.codigo_producto = detalle_pedido.codigo_producto
+inner join pedido on detalle_pedido.codigo_pedido = pedido.codigo_pedido
+inner join cliente on pedido.codigo_cliente = cliente.codigo_cliente
+inner join empleado on cliente.codigo_empleado_rep_ventas = empleado.codigo_empleado
+inner join oficina on empleado.codigo_oficina = oficina.codigo_oficina
+where producto.gama != 'Frutales';
+
+## clientes que han realizado algun pedido pero ningun pago
+select cliente.nombre_cliente
+from pedido
+inner join cliente on pedido.codigo_cliente = cliente.codigo_cliente
+where cliente.codigo_cliente not in(select pago.codigo_cliente from pago);
+
+## empleados que no tienen clientes asocicados y el nombre de su jefe asociado
+select emp.nombre as NombreEmpleado, jef.nombre as NombreJefe
+from empleado emp
+inner join empleado jef on emp.codigo_jefe = jef.codigo_empleado
+where emp.codigo_empleado not in (select cliente.codigo_empleado_rep_ventas from cliente);
+
+## cuantos empleados hay en la empresa
+select count(*)
+from empleado;
+
+## cuantos clientes tiene cada país
+select pais, count(*) as numero_clientes
+from cliente
+group by pais;
+
+## pago medio año 2009
+select avg(total)
+from pago
+where year(fecha_pago) = 2009;
+
+## cuantos pedidos hay en cada estado - resultado de forma descendente por el numero de pedidos
+select estado, count(*) as numero_pedidos
+from pedido
+group by estado
+order by numero_pedidos Desc;
+
+## precio de venta del producto mas caro y mas barato en una consulta
+select max(precio_venta) , min(precio_venta)
+from producto;
+
+## numero de clientes en la empresa
+select count(*)
+from cliente;
+
+## clientes - domicilio en madrid
+select count(*)
+from cliente
+where ciudad = 'Madrid';
+
+## clientes - cada una de las ciudades que empiezan por m
+select ciudad, count(*) as numero_clientes
+from cliente
+where ciudad like 'M%'
+group by ciudad;
+
+## nombre de representantes de ventas y numero de clientes que atiende cada uno
+select empleado.nombre, count(*) as numero_clientes
+from empleado
+left join cliente on empleado.codigo_empleado = cliente.codigo_empleado_rep_ventas
+group by empleado.nombre;
+
+## numero de clientes que no tiene representante de ventas
+select count(*)
+from cliente
+where codigo_empleado_rep_ventas = null;
+
+## fecha primer y ultimo pago realizado por cada uno de los clientes - mostrar nombre y apellidos de cada cliente (los clientes no tienen registrado apellido)
+select cliente.nombre_cliente, min(pago.fecha_pago) as primer_pago, max(pago.fecha_pago) as ultimo_pago
+from cliente
+inner join pago on cliente.codigo_cliente = pago.codigo_cliente
+group by cliente.nombre_cliente;
+
+## numero de productos diferentes en cada uno de los pedidos
+select detalle_pedido.codigo_pedido, count(distinct detalle_pedido.codigo_producto) as productos_diferentes
+from detalle_pedido
+group by detalle_pedido.codigo_pedido;
+
+## suma de la cantidad total de todos los productos que aparecen en cada uno de los pedidos
+select codigo_pedido, sum(cantidad) as cantidad_total
+from detalle_pedido
+group by codigo_pedido;
+
+## Devuelve un listado de los 20 productos más vendidos - el número total de unidades que se han vendido de cada uno - El listado deberá estar ordenado por el número total de unidades vendidas
+select detalle_pedido.codigo_producto, producto.nombre as nombre_producto, sum(detalle_pedido.cantidad) as total_unidades_vendidas
+from detalle_pedido
+inner join producto on detalle_pedido.codigo_producto = producto.codigo_producto
+group by detalle_pedido.codigo_producto, producto.nombre
+ORDER BY total_unidades_vendidas desc limit 20;
+
+## La facturación que ha tenido la empresa en toda la historia, indicando la base imponible, el IVA y el total facturado. La base imponible se calcula sumando el coste del producto por el número de unidades vendidas de la tabla detalle_pedido. El IVA es el 21 % de la base imponible, y el total la suma de los dos campos anteriores.
+select sum(dp.cantidad * p.precio_venta) as base_imponible, sum(dp.cantidad * p.precio_venta) * 0.21 as iva, sum(dp.cantidad * p.precio_venta) * 1.21 as total_facturado
+from detalle_pedido dp
+inner join producto p on dp.codigo_producto = p.codigo_producto;
+
+## la misma informacion anterior pero agrupada por codigo_producto
+select dp.codigo_producto, sum(dp.cantidad * p.precio_venta) as base_imponible, sum(dp.cantidad * p.precio_venta) * 0.21 as iva, sum(dp.cantidad * p.precio_venta) * 1.21 as total_facturado
+from detalle_pedido dp
+inner join producto p on dp.codigo_producto = p.codigo_producto
+group by dp.codigo_producto;
+
 --1.4.8
 
 --Devuelve el nombre del cliente con mayor límite de crédito.
@@ -292,7 +451,4 @@ JOIN empleado e ON o.codigo_oficina = e.codigo_oficina;
 GROUP BY o.ciudad;
 ORDER BY o.ciudad;
 
-
-
-
-
+-- Desarrollado por Brayan Yesid Lindarte Anaya / ID 10.xx.xxx.xxx
