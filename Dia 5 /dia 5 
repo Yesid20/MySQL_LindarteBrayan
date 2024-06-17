@@ -1,0 +1,298 @@
+--1.4.8
+
+--Devuelve el nombre del cliente con mayor límite de crédito.
+
+SELECT nombre_cliente 
+FROM cliente 
+WHERE limite_credito = (SELECT MAX(limite_credito) FROM cliente);
+
+
+--Devuelve el nombre del producto que tenga el precio de
+--venta más caro.
+
+
+SELECT nombre
+FROM producto 
+WHERE precio_venta =  (SELECT MAX(precio_venta) FROM producto);
+
+-- Devuelve el nombre del producto del que se han vendido
+--más unidades. (Tenga en cuenta que tendrá que calcular
+--cuál es el número total de unidades que se han vendido de
+-- cada producto a partir de los datos de la
+--tabla detalle_pedido)
+
+SELECT nombre;
+FROM producto;
+WHERE codigo_producto =(
+    SELECT codigo_producto
+    FROM detalle_pedido
+    GROUP BY codigo_producto 
+    ORDER BY SUM(cantidad) DESC 
+    LIMIT 1 
+);
+
+
+-- Los clientes cuyo límite de crédito sea mayor que los pagos
+--que haya realizado. (Sin utilizar INNER JOIN).
+
+SELECT nombre_cliente;
+FROM cliente c;
+WHERE limite_credito > (SELECT COALESCE(SUM(total), 0)
+                        FROM pago p 
+                        WHERE p.codigo_cliente = c.codigo_cliente);
+
+-- Devuelve el producto que más unidades tiene en stock
+
+
+SELECT nombre;
+FROM producto; 
+WHERE cantidad_en_stock = (SELECT MAX(cantidad_en_stock) FROM producto);
+
+--Devuelve el producto que menos unidades tiene en stock
+
+
+SELECT nombre;
+FROM producto;
+WHERE cantidad_en_stock = (SELECT MIN(cantidad_en_stock) FROM producto);
+
+--Devuelve el nombre, los apellidos y el email de los empleados que están a cargo de Alberto Soria
+
+
+SELECT nombre, apellido1, apellido2, email 
+FROM empleado 
+WHERE codigo_jefe = (SELECT codigo_empleado
+                    FROM empleado
+                    WHERE nombre = 'Alberto'
+                    AND apellido1 = 'Soria');
+--1.4.8.2 
+
+-- Devuelve el nombre del cliente con mayor límite de crédito
+
+SELECT nombre_cliente;
+FROM cliente;
+WHERE limite_credito = ANY (
+    SELECT MAX(limite_credito)
+    FROM cliente;
+)
+
+-- Devuelve el nombre del producto que tenga el precio de venta más caro
+
+SELECT nombre;
+FROM producto;
+WHERE precio_venta >= ALL (SELECT precio_venta FROM producto);
+
+-- Devuelve el producto que menos unidades tiene en stock
+
+
+SELECT nombre;
+FROM producto;
+WHERE cantidad_en_stock <= ALL (SELECT cantidad_en_stock FROM producto);
+
+-- 1.4.8.3 
+
+-- Devuelve el nombre, apellido1 y cargo de los empleados que no representan a ningun cliente.
+
+SELECT e.nombre, e.apellido1, e.puesto;
+FROM empleado e;
+WHERE e.codigo_empleado NOT IN (
+    SELECT c.codigo_empleado_rep_ventas
+    FROM cliente c 
+);
+
+-- Devuelve un listado que muestre solamente los clientes que no han realizado ningún pago
+
+SELECT c.nombre_cliente, c.nombre_contacto, c.apellido_contacto, c.telefono;
+FROM cliente c;
+WHERE c.codigo_cliente NOT IN (
+    SELECT p.codigo_cliente
+    FROM pago p 
+);
+
+-- Devuelve un listado que muestre solamente los clientes que si han realizado algún pago
+
+
+SELECT c.nombre_cliente, c.nombre_contacto, c.apellido_contacto, c.telefono;
+FROM cliente c;
+WHERE c.codigo_cliente IN (
+    SELECT p.codigo_cliente 
+    FROM pago p
+);
+
+-- Devuelve un listado de los productos que nunca han aparecido en un pedido
+
+
+SELECT p.codigo_producto, p.nombre;
+FROM producto p; 
+WHERE p.codigo_producto NOT IN (
+    SELECT dp.codigo_producto 
+    FROM detalle_pedido dp
+);
+
+-- Devuelve el nombre, apellidos, puesto y telefono de la oficina de aquellos empleados que no sean representante de ventas
+-- de ningun cliente
+
+SELECT e.nombre, e.apellido1, e.apellido2, e.puesto, o.telefono;
+FROM empleado e;
+JOIN oficina o ON e.codigo_oficina = o.codigo_oficina;
+WHERE e.codigo_empleado NOT IN (
+    SELECT c.codigo_empleado_rep_ventas;
+    FROM cliente c;
+)
+
+--Devuelve las oficinas donde no trabajan ninguno de los empleados que hayan sido los representantes de ventas de algun cliente 
+--que haya realizado la compra de algún producto de la gama frutales
+
+
+SELECT o.*
+FROM oficina o 
+WHERE o.codigo_oficina NOT IN (
+    SELECT DISTINCT e.codigo_oficina 
+    FROM empleado e
+    WHERE e.codigo_empleado IN (
+        SELECT DISTINCT c.codigo_empleado_rep_ventas
+        FROM cliente c 
+        WHERE c.codigo_cliente IN (
+            SELECT p.codigo_cliente
+            FROM pedido p 
+            JOIN detalle_pedido dp ON p.codigo_pedido = dp.codigo_pedido
+            JOIN producto pr ON dp.codigo_producto = pr.codigo_producto
+            WHERE pr.gama = 'frutales'
+        )
+    )
+);
+
+-- Devuelve un listado con los clientes que han realizado algun pedido pero no han realizado ningún pago
+
+
+SELECT c.nombre_cliente, c.nombre_contacto, c.apellido_contacto, c.telefono;
+FROM cliente c;
+WHERE c.codigo_cliente IN (
+    SELECT p.codigo_cliente 
+    FROM pedido p 
+)
+AND c.codigo_cliente NOT IN (
+    SELECT pa.codigo_cliente 
+    FROM pago pa 
+);
+
+-- 1.4.8.4
+
+-- Devuelve un listado que mueste solamente los clientes que no han realizado ningún pago
+
+SELECT c.nombre_cliente;
+FROM cliente c;
+WHERE not exists (
+    SELECT 1
+    FROM pago p
+    WHERE p.codigo_cliente = c.codigo_cliente
+)
+ORDER BY c.nombre_cliente;
+
+-- Devuelve un listado que muestre solamente los clientes que si han realizado algún pago
+
+
+SELECT c.nombre_cliente;
+FROM cliente c;
+WHERE exists (
+    SELECT 1
+    FROM pago p
+    WHERE p.codigo_cliente = c.codigo_cliente
+)
+
+ORDER BY c.nombre_cliente;
+
+--Devuelve un listado de los productos que nunca han aparecido en un pedido
+
+
+SELECT p.nombre;
+FROM producto p;
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM detalle_pedido dp
+    WHERE dp.codigo_producto = p.codigo_producto
+)
+
+ORDER BY p.nombre;
+
+--  Devuelve un listado de los productos que han aparecido en un pedido alguna vez
+
+SELECT p.codigo_producto, p.nombre;
+FROM producto p;
+WHERE EXISTS (
+    SELECT 1
+    FROM detalle_pedido dp 
+    WHERE dp.codigo_producto = p.codigo_producto
+);
+
+-- 1.4.9
+
+
+-- Devuelve el listado de clientes indicando el nombre del cliente y cuantos pedidos ha realizado. 
+-- tenga en cuenta que pueden existir clientes que no han realizado ningún pedido
+
+
+SELECT c.nombre_cliente COUNT(p.codigo_pedido) AS num_pedidos;
+FROM cliente c;
+LEFT JOIN pedido p ON c.codigo_cliente = p.codigo_pedido;
+GROUP BY c.nombre_cliente;
+
+-- Devuelve un listado con los nombres de los clientes y el total pagado por cada uno de ellos. 
+-- Tenga en cuenta que pueden existir clientes que no han realizado ningún pago
+
+SELECT c.nombre_cliente COALESCE(SUM(p.total), 0) AS total_pagado;
+FROM cliente c;
+LEFT JOIN pago p ON c.codigo_cliente = p.codigo_cliente;
+GROUP BY c.nombre_cliente;
+-- Devuelve el nombre de los clientes que hayan hecho pedidos en 2008 ordenados alfabeticamente de menor a mayor
+
+
+SELECT DISTINCT c.nombre_cliente;
+FROM cliente c;
+JOIN pedido p ON c.codigo_cliente = p.codigo_pedido;
+WHERE YEAR (p.fecha_pedido) = 2008;
+ORDER BY c.nombre_cliente ASC;
+
+--Devuelve el nombre del cliente, el nombre y el primer apellido de su representante de ventas y 
+--el numero de telefono de la oficina del representante de ventas de aquellos clientes que no hayan realizado ningún pago
+
+SELECT c.nombre_cliente, e.nombre AS nombre_representante, e.apellido1 AS apellido_representante, o.telefono AS telefono_oficina;
+FROM cliente c;
+JOIN empleado e ON c.codigo_empleado_rep_ventas = e.codigo_empleado;
+JOIN oficina o ON e.codigo_oficina = o.codigo_oficina;
+LEFT JOIN pago p ON c.codigo_cliente = p.codigo_cliente;
+WHERE p.codigo_cliente IS NULL
+GROUP BY c.codigo_cliente;
+GROUP BY c.nombre_cliente;
+
+--Devuelve el listado de clientes donde aparezca el nombre del cliente, el nombre y el primer apellido de su representante de ventas 
+--y la ciudad donde está su oficina
+
+SELECT c.nombre_cliente, e.nombre AS nombre_representante, e.apellido1 AS apellido_representante, o.ciudad;
+FROM cliente c;
+JOIN empleado e ON c.codigo_empleado_rep_ventas = e.codigo_empleado;
+JOIN oficina o ON e.codigo_oficina = o.codigo_oficina;
+ORDER BY c.nombre_cliente;
+
+
+--Devuelve el nombre, apellidos, puesto y telefono de la oficina de aquellos empleados 
+--que no sean representante de ventas de ningun cliente
+
+SELECT e.nombre, e.apellido1, e.apellido2, e.puesto, o.telefono;
+FROM empleado e;
+JOIN oficina o ON e.codigo_oficina = o.codigo_oficina;
+LEFT JOIN cliente c ON e.codigo_empleado = c.codigo_empleado_rep_ventas;
+WHERE c.codigo_empleado_rep_ventas IS NULL;
+ORDER BY e.nombre;
+
+-- Devuelve un listado indicando todas las ciudades donde hay oficinas y el numero de empleados que tiene
+
+SELECT o.ciudad, COUNT(e.codigo_empleado) AS num_empleados;
+FROM oficina o;
+JOIN empleado e ON o.codigo_oficina = e.codigo_oficina;
+GROUP BY o.ciudad;
+ORDER BY o.ciudad;
+
+
+
+
+
